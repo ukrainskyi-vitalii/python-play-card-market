@@ -33,7 +33,7 @@ class UserResource(Resource):
         if role not in ['admin', 'regular']:
             return {'error': 'Invalid role'}, 400
 
-        user = session.query(User).filter(User.username == username, User.email == email).first()
+        user = session.query(User).filter(User.email == email).first()
         if user:
             return {'error': 'Username already exists'}, 400
 
