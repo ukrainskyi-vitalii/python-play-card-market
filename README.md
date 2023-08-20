@@ -1,4 +1,22 @@
 # python-play-card-market
+## Add new user
+### POST http://localhost:3000/user
+### Body
+    {
+        "username": "#username#",
+        "email": "#email#",
+        "country": "#country#",
+        "role": "#admin_or_regular#"
+    }
+
+## Get All Users (admin)
+### Header: Authorization:#auth_token#
+### GET http://localhost:3000/user
+
+## Get User
+### Header: Authorization:#auth_token#
+### GET http://localhost:3000/user/#user_id#
+
 # Functional requirements:
 > Users should be able to create an account and login
  

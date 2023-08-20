@@ -1,4 +1,5 @@
 import sqlalchemy
+from sqlalchemy.orm import relationship
 
 from database import Base
 
@@ -12,6 +13,7 @@ class User(Base):
     country = sqlalchemy.Column("country", sqlalchemy.String(length=255))
     role = sqlalchemy.Column("role", sqlalchemy.Enum('admin', 'regular', name='user_roles'), default='regular')
     budget = sqlalchemy.Column("budget", sqlalchemy.Integer, default=500)
+    cards = relationship("Card", back_populates="user")
 
     def __init__(self, username, email, country, role, budget):
         self.username = username
