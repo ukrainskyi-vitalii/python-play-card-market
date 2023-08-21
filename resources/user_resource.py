@@ -6,6 +6,9 @@ from sqlalchemy.exc import DataError
 
 from config import SECRET_KEY, FOOTBALL_API_LEAGUE_ID, FOOTBALL_API_KEY
 from database import Session
+from exceptions.authorization_exception import AuthorizationException
+from exceptions.card_exception import CardException
+from exceptions.not_found_exception import NotFoundException
 from models.card import Card
 from models.user import User
 from email_validator import validate_email, EmailNotValidError
@@ -15,53 +18,37 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature
 
 class UserResource(Resource):
     def __init__(self):
+        self.__session = Session()
         self.__budget = 500
         self.secret_key = SECRET_KEY
         self.serializer = URLSafeTimedSerializer(self.secret_key)
 
     def post(self):
-        session = Session()
-
-        parser = reqparse.RequestParser()
-        parser.add_argument('username', required=True, help='Username is required')
-        parser.add_argument('email', required=True, help='Email is required')
-        parser.add_argument('country', required=True, help='Country is required')
-        parser.add_argument('role', required=True, help='Choose your role')
-        args = parser.parse_args()
-
-        username = args['username']
-        email = args['email']
-        country = args['country']
-        role = args['role']
-
         try:
-            validate_email(email)
-        except EmailNotValidError:
-            return {'error': 'Invalid email format'}, 400
+            # get request parameters
+            post_data = self.get_args(True)
 
-        if role not in ['admin', 'regular']:
-            return {'error': 'Invalid role'}, 400
+            # validation
+            validate_email(post_data['email'])
+            self.role_validation(post_data['role'])
+            self.is_new_user_validation(post_data['email'])
 
-        user = session.query(User).filter(User.email == email).first()
-        if user:
-            return {'error': 'This email already exists'}, 400
+            # get random cards
+            card_data_list = self.generate_player_cards()
 
-        # get random cards
-        card_data_list = self.generate_player_cards()
-        print(f"card_data_list: {card_data_list}")
-        try:
             # create new user
             new_user = User(
-                username=username,
-                email=email,
-                country=country,
-                role=role,
+                username=post_data['username'],
+                email=post_data['email'],
+                country=post_data['country'],
+                role=post_data['role'],
                 budget=self.__budget
             )
 
-            session.add(new_user)
-            session.commit()
+            self.__session.add(new_user)
+            self.__session.commit()
 
+            # add cards
             for card_data in card_data_list:
                 new_card = Card(
                     name=card_data.get('name', ''),
@@ -69,24 +56,135 @@ class UserResource(Resource):
                     skill=card_data.get('skill', ''),
                     user_id=new_user.id
                 )
-                session.add(new_card)
-                session.commit()
+                self.__session.add(new_card)
+                self.__session.commit()
 
             token = self.serializer.dumps({"user_id": new_user.id}, salt="user-salt")
+
+            self.__session.close()
 
             return {
                 'message': 'User registered successfully',
                 'user_id': new_user.id,
                 'token': token
             }, 201
+        except CardException as e:
+            return {'error': str(e)}, 401
         except DataError as e:
-            session.rollback()
-            return {'error': 'DataError: ' + str(e)}, 400
-
+            return {'error': str(e)}, 400
+        except EmailNotValidError as e:
+            return {'error': str(e)}, 400
+        except Exception as e:
+            return {'error': str(e)}, 400
 
     def get(self, user_id=None):
-        session = Session()
+        try:
+            authorized_user = self.authorization()
 
+            # request validation
+            self.check_permission(authorized_user, user_id)
+
+            # get users data
+            users = []
+            if user_id is not None:
+                users.append(self.get_user_by_id(user_id))
+            else:
+                users = self.__session.query(User).all()
+
+            user_data = []
+            for user in users:
+                user_data.append({
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "country": user.country,
+                    "role": user.role,
+                    "budget": user.budget
+                })
+
+            self.__session.close()
+
+            return user_data, 200
+        except AuthorizationException as e:
+            return {'error': str(e)}, 401
+        except DataError as e:
+            return {'error': str(e)}, 400
+        except Exception as e:
+            return {'error': str(e)}, 400
+
+    def patch(self, user_id):
+        try:
+            authorized_user = self.authorization()
+
+            # request validation
+            self.check_permission(authorized_user, user_id)
+
+            # get user to update
+            user_to_update = self.get_user_by_id(user_id)
+
+            # get request parameters
+            patch_data = self.get_args()
+
+            # prepare and validate data to update
+            if patch_data['username'] is not None:
+                user_to_update.username = patch_data['username']
+
+            if patch_data['email'] is not None:
+                validate_email(patch_data['email'])
+                self.is_new_user_validation(patch_data['email'])
+                user_to_update.email = patch_data['email']
+
+            if patch_data['country'] is not None:
+                user_to_update.country = patch_data['country']
+
+            if patch_data['role'] is not None:
+                self.role_validation(patch_data['role'])
+                user_to_update.role = patch_data['role']
+
+            self.__session.commit()
+            self.__session.close()
+
+            return {
+                'message': 'User updated successfully',
+            }, 201
+        except NotFoundException as e:
+            return {'error': str(e)}, 404
+        except EmailNotValidError as e:
+            return {'error': str(e)}, 400
+        except AuthorizationException as e:
+            return {'error': str(e)}, 401
+        except PermissionError as e:
+            return {'error': str(e)}, 403
+        except Exception as e:
+            return {'error': str(e)}, 400
+
+    def delete(self, user_id):
+        try:
+            authorized_user = self.authorization()
+
+            # request validation
+            self.check_permission(authorized_user, user_id)
+
+            # get user to delete
+            user_to_delete = self.get_user_by_id(user_id)
+
+            self.__session.delete(user_to_delete)
+            self.__session.commit()
+            self.__session.close()
+
+            return {
+                'message': 'User deleted successfully',
+            }, 201
+        except AuthorizationException as e:
+            return {'error': str(e)}, 401
+        except PermissionError as e:
+            return {'error': str(e)}, 403
+        except NotFoundException as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 400
+
+    def authorization(self):
         parser = reqparse.RequestParser()
         parser.add_argument('Authorization', location='headers')
 
@@ -94,54 +192,56 @@ class UserResource(Resource):
 
         token = args['Authorization']
         if token is None:
-            return {'error': 'Empty token'}, 401
+            raise AuthorizationException('Empty token')
 
         try:
             data = self.serializer.loads(token, salt="user-salt")
-            user = session.query(User).filter_by(id=data["user_id"]).first()
-        except BadSignature:
-            return {'error': 'Invalid token'}, 401
+            user = self.__session.query(User).filter_by(id=data["user_id"]).first()
+            if user is None:
+                raise AuthorizationException('User not found')
 
+            return user
+        except BadSignature:
+            raise AuthorizationException('Invalid token')
+
+    def check_permission(self, user, user_id):
         # Deny access if not admin and requested another user id
         if not user.role == 'admin' and user.id != user_id:
-            return {'error': 'Forbidden'}, 403
+            raise PermissionError('Forbidden')
 
-        users = []
-        if user_id is not None:
-            user_search = session.query(User).filter_by(id=user_id).first()
+    def get_args(self, is_required=False):
+        parser = reqparse.RequestParser()
+        parser.add_argument('username', required=is_required, help='Username is required')
+        parser.add_argument('email', required=is_required, help='Email is required')
+        parser.add_argument('country', required=is_required, help='Country is required')
+        parser.add_argument('role', required=is_required, help='Choose your role')
+        return parser.parse_args()
 
-            if user_search is None:
-                return {'error': 'No user found'}, 404
+    def role_validation(self, role):
+        if role not in ['admin', 'regular']:
+            raise Exception('Invalid role')
 
-            users.append(user_search)
-        else:
-            users = session.query(User).all()
+    def is_new_user_validation(self, email):
+        if self.__session.query(User).filter(User.email == email).first():
+            raise Exception('The user with this email already exists')
 
-        user_data = []
+    def get_user_by_id(self, user_id):
+        user = self.__session.query(User).filter_by(id=user_id).first()
 
-        for user in users:
-            user_data.append({
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "country": user.country,
-                "role": user.role,
-                "budget": user.budget
-            })
+        if user is None:
+            raise NotFoundException('No user found')
 
-        session.close()
-
-        return user_data, 200
+        return user
 
     def generate_player_cards(self, num_cards=5):
-        api_url = "https://apiv3.apifootball.com/?action=get_teams&league_id="+FOOTBALL_API_LEAGUE_ID+"&APIkey=" + FOOTBALL_API_KEY
+        api_url = "https://apiv3.apifootball.com/?action=get_teams&league_id=" + FOOTBALL_API_LEAGUE_ID + "&APIkey=" + FOOTBALL_API_KEY
         response = requests.get(api_url)
-        print(f"response {response}")
+
         if response.status_code == 200:
             teams_data = response.json()
 
             if 'error' in teams_data:
-                return {'error': teams_data.get('message', 'Get Players API returns error')}, 400
+                raise CardException('Get Players API returns error')
 
             # get random team
             random_team = random.choice(teams_data)
@@ -161,4 +261,4 @@ class UserResource(Resource):
 
             return cards
         else:
-            return {'error': 'Get Players API returns error'}, 400
+            raise CardException('Get Players API returns error')

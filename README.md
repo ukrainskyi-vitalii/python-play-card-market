@@ -9,13 +9,25 @@
         "role": "#admin_or_regular#"
     }
 
-## Get All Users (admin)
+## Get All Users
+_Only admin can get all users_
 ### Header: Authorization:#auth_token#
 ### GET http://localhost:3000/user
 
 ## Get User
+_Admin can get any user, regular user can get only himself_
 ### Header: Authorization:#auth_token#
 ### GET http://localhost:3000/user/#user_id#
+
+## Update User
+_Admin can update any user, regular user can update only himself_
+### Header: Authorization:#auth_token#
+### PATCH http://localhost:3000/user/#user_id#
+
+## Delete User
+_Admin can delete any user, regular user can delete only himself_
+### Header: Authorization:#auth_token#
+### DELETE http://localhost:3000/user/#user_id#
 
 # Functional requirements:
 > Users should be able to create an account and login

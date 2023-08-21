@@ -11,4 +11,4 @@ api.add_resource(UserResource, '/user/<int:user_id>', '/user')
 
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
-    app.run(host='localhost', port=3000, debug=False)
+    app.run(host='localhost', port=3001, debug=False)
