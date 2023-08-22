@@ -6,7 +6,16 @@
         "username": "#username#",
         "email": "#email#",
         "country": "#country#",
-        "role": "#admin_or_regular#"
+        "role": "#admin_or_regular#",
+        "password": "#password#"
+    }
+
+## Login to get auth token
+### POST http://localhost:3002/login
+### Body
+    {
+        "email": "#email#",
+        "password": "#password#"
     }
 
 ## Get All Users
@@ -85,6 +94,7 @@ the developed application. Use mocks for external dependencies.
 - id
 - username
 - email
+- password
 - country
 - role
 - budget
