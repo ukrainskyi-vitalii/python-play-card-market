@@ -107,13 +107,17 @@ class UserResource(Resource):
 
                 user_data = []
                 for user in users:
+                    user_cards = session.query(Card).filter_by(user_id=user.id).all()
+                    collection_value = sum(card.market_value for card in user_cards)
+
                     user_data.append({
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
                         "country": user.country,
                         "role": user.role,
-                        "budget": user.budget
+                        "budget": user.budget,
+                        "collection_value": collection_value
                     })
 
                 return user_data, 200
@@ -142,17 +146,8 @@ class UserResource(Resource):
                 if patch_data['username'] is not None:
                     user_to_update.username = patch_data['username']
 
-                if patch_data['email'] is not None:
-                    validate_email(patch_data['email'])
-                    self.is_new_user_validation(patch_data['email'])
-                    user_to_update.email = patch_data['email']
-
                 if patch_data['country'] is not None:
                     user_to_update.country = patch_data['country']
-
-                if patch_data['role'] is not None:
-                    self.role_validation(patch_data['role'])
-                    user_to_update.role = patch_data['role']
 
                 session.commit()
 
