@@ -26,7 +26,10 @@ _Only admin can get all users_
 ## Get User
 _Admin can get any user, regular user can get only himself_
 ### Header: Authorization:#auth_token#
-### GET http://localhost:3000/user/#user_id#
+### GET http://localhost:3000/user/#user_id#?page=#page#&per_page=#per_page#
+### Params:
+- page - the number on the page you want to get
+- per_page - how many users show on a page
 
 ## Update User
 _Admin can update any user, regular user can update only himself_

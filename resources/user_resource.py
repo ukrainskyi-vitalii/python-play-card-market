@@ -1,12 +1,12 @@
 import asyncio
 import json
-
 import aiohttp
-import requests
 import random
 import bcrypt
 
+from flask import request
 from flask_restful import Resource, reqparse
+
 from sqlalchemy.exc import DataError
 from werkzeug.exceptions import HTTPException
 
@@ -103,7 +103,17 @@ class UserResource(Resource):
                 if user_id is not None:
                     users.append(self.get_user_by_id(user_id))
                 else:
-                    users = session.query(User).all()
+                    # Get query parameters for pagination
+                    page = request.args.get('page', default=1, type=int)
+                    per_page = request.args.get('per_page', default=2, type=int)
+
+                    users_query = session.query(User)
+
+                    # Calculate the offset based on the page and per_page values
+                    offset = (page - 1) * per_page
+
+                    # Perform pagination using limit and offset
+                    users = users_query.limit(per_page).offset(offset).all()
 
                 user_data = []
                 for user in users:
