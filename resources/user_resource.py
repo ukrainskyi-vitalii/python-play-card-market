@@ -1,3 +1,7 @@
+import asyncio
+import json
+
+import aiohttp
 import requests
 import random
 import bcrypt
@@ -37,7 +41,7 @@ class UserResource(Resource):
                 self.is_new_user_validation(post_data['email'])
 
                 # get random cards
-                card_data_list = self.generate_player_cards()
+                card_data_list = asyncio.run(self.generate_player_cards())
 
                 # Hash the password using bcrypt
                 hashed_password = self.hash_password(post_data['password'])
@@ -71,7 +75,7 @@ class UserResource(Resource):
                     'message': 'User registered successfully',
                     'user_id': new_user.id
                 }, 201
-        # catch reqparse exception
+            # catch reqparse exception
         except HTTPException as e:
             if hasattr(e, 'data'):
                 return {'error': e.data.get('message', str(e))}, 400
@@ -197,7 +201,6 @@ class UserResource(Resource):
         except Exception as e:
             return {'error': str(e)}, 400
 
-
     def check_permission(self, user, user_id):
         # Deny access if not admin and requested another user id
         if not user.role == 'admin' and user.id != user_id:
@@ -233,12 +236,13 @@ class UserResource(Resource):
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
         return hashed_password.decode('utf-8')
 
-    def generate_player_cards(self, num_cards=5):
+    async def generate_player_cards(self, num_cards=5):
         api_url = "https://apiv3.apifootball.com/?action=get_teams&league_id=" + FOOTBALL_API_LEAGUE_ID + "&APIkey=" + FOOTBALL_API_KEY
-        response = requests.get(api_url)
+        tasks = [asyncio.create_task(self.fetch(api_url))]
+        responses = await asyncio.gather(*tasks)
 
-        if response.status_code == 200:
-            teams_data = response.json()
+        for response in responses:
+            teams_data = json.loads(response)
 
             if 'error' in teams_data:
                 raise CardException('Get Players API returns error')
@@ -260,5 +264,8 @@ class UserResource(Resource):
                 })
 
             return cards
-        else:
-            raise CardException('Get Players API returns error')
+
+    async def fetch(self, url):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
