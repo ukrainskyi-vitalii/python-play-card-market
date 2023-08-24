@@ -30,6 +30,7 @@ _Admin can get any user, regular user can get only himself_
 
 ## Update User
 _Admin can update any user, regular user can update only himself_
+_username and country can be updated_
 ### Header: Authorization:#auth_token#
 ### PATCH http://localhost:3000/user/#user_id#
 
