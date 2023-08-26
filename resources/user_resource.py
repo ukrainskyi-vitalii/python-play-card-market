@@ -133,6 +133,8 @@ class UserResource(Resource):
                 return user_data, 200
         except AuthorizationException as e:
             return {'error': str(e)}, 401
+        except PermissionError as e:
+            return {'error': str(e)}, 403
         except DataError as e:
             return {'error': str(e)}, 400
         except Exception as e:

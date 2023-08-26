@@ -42,6 +42,11 @@ _Admin can delete any user, regular user can delete only himself_
 ### Header: Authorization:#auth_token#
 ### DELETE http://localhost:3000/user/#user_id#
 
+## Unittest
+### Run: _coverage run -m unittest .\tests\test_resources.py_
+### Report: _coverage report -m_
+### Html Report: _coverage html_
+
 # Functional requirements:
 > Users should be able to create an account and login
  
