@@ -75,7 +75,7 @@ class UserResource(Resource):
                     'message': 'User registered successfully',
                     'user_id': new_user.id
                 }, 201
-            # catch reqparse exception
+            # catch req parse exception
         except HTTPException as e:
             if hasattr(e, 'data'):
                 return {'error': e.data.get('message', str(e))}, 400
@@ -243,7 +243,7 @@ class UserResource(Resource):
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
         return hashed_password.decode('utf-8')
 
-    async def generate_player_cards(self, num_cards=5):
+    async def generate_player_cards(self, num_cards=5, default_skill='5'):
         api_url = "https://apiv3.apifootball.com/?action=get_teams&league_id=" + FOOTBALL_API_LEAGUE_ID + "&APIkey=" + FOOTBALL_API_KEY
         tasks = [asyncio.create_task(self.fetch(api_url))]
         responses = await asyncio.gather(*tasks)
@@ -264,10 +264,12 @@ class UserResource(Resource):
             cards = []
 
             for player in random_players:
+                skill = player.get('player_rating', '-')
+                skill = default_skill if skill == '' else skill
                 cards.append({
                     "name": player.get('player_name', 'Noname'),
                     "age": player.get('player_age', '-'),
-                    "skill": player.get('player_rating', '-')
+                    "skill": skill
                 })
 
             return cards
