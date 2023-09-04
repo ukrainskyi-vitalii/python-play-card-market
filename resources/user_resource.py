@@ -187,13 +187,14 @@ class UserResource(Resource):
 
                 # get user to delete
                 user_to_delete = self.get_user_by_id(user_id)
-                session.delete(user_to_delete)
 
                 # get cards to delete
                 cards_to_delete = session.query(Card).filter_by(user_id=user_id)
+
                 for card in cards_to_delete:
                     session.delete(card)
 
+                session.delete(user_to_delete)
                 session.commit()
 
                 return {
@@ -232,7 +233,7 @@ class UserResource(Resource):
 
     def get_user_by_id(self, user_id):
         user = self.__session.query(User).filter_by(id=user_id).first()
-
+        print(f"user: {user}")
         if user is None:
             raise NotFoundException('No user found')
 
