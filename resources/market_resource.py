@@ -155,7 +155,7 @@ class MarketResource(Resource):
                         session.commit()
 
                         if owner.id != buyer.id:
-                            raise Exception(f"Custom Exception: owner.id={owner.id}, buyer.id={buyer.id}")
+                            self.predict_and_update_prices()
 
                         return {
                             'card_id': card.id,
