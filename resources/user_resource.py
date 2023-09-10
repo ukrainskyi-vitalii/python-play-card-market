@@ -119,6 +119,8 @@ class UserResource(Resource):
                 for user in users:
                     user_cards = session.query(Card).filter_by(user_id=user.id).all()
                     collection_value = sum(card.market_value for card in user_cards)
+                    card_count = len(user_cards)
+                    card_ids = [card.id for card in user_cards]
 
                     user_data.append({
                         "id": user.id,
@@ -127,7 +129,9 @@ class UserResource(Resource):
                         "country": user.country,
                         "role": user.role,
                         "budget": user.budget,
-                        "collection_value": collection_value
+                        "collection_value": collection_value,
+                        "cards_count": card_count,
+                        "cards_list": card_ids,
                     })
 
                 return user_data, 200

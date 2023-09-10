@@ -2,7 +2,6 @@ from flask import request
 from flask_restful import Resource, reqparse
 
 from sqlalchemy.exc import DataError
-from sqlalchemy import or_
 from werkzeug.exceptions import HTTPException
 
 from config import SECRET_KEY
@@ -77,14 +76,17 @@ class MarketResource(Resource):
                     self.card_validation(card_id)
                     card = session.query(Card).filter(
                         Card.id == card_id,
-                        Card.on_market == True,
-                        or_(Card.user_id == authorized_user.id, authorized_user.role == 'admin')
+                        Card.on_market == True
                     ).first()
                     if card:
                         return {
                             'card_id': card.id,
                             'card_name': card.name,
+                            'card_age': card.age,
+                            'card_skill': card.skill,
                             'market_value': card.market_value,
+                            'market_price': card.market_price,
+                            'owner_id': card.user_id
                         }, 200
                     else:
                         return {
@@ -101,15 +103,18 @@ class MarketResource(Resource):
 
                     # Perform pagination using limit and offset
                     cards = self.__session.query(Card).filter(
-                        Card.on_market == True,
-                        or_(Card.user_id == authorized_user.id, authorized_user.role == 'admin')
+                        Card.on_market == True
                     ).limit(per_page).offset(offset).all()
                     if cards:
                         card_data = [
                             {
                                 'card_id': card.id,
                                 'card_name': card.name,
+                                'card_age': card.age,
+                                'card_skill': card.skill,
                                 'market_value': card.market_value,
+                                'market_price': card.market_price,
+                                'owner_id': card.user_id
                             }
                             for card in cards
                         ]
@@ -140,23 +145,30 @@ class MarketResource(Resource):
 
                     card = self.__session.query(Card).filter_by(id=card_id, on_market=True).first()
                     if card and int(authorized_user.budget) >= int(card.market_price):
-                        user = self.__session.query(User).filter_by(id=card.user_id).first()
-                        authorized_user.budget = int(authorized_user.budget) - int(card.market_price)
-                        user.budget = int(user.budget) + int(card.market_price)
-                        card.user_id = authorized_user.id
+                        owner = self.__session.query(User).filter_by(id=card.user_id).first()
+                        buyer = self.__session.query(User).filter_by(id=authorized_user.id).first()
+                        buyer.budget = int(buyer.budget) - int(card.market_price)
+                        owner.budget = int(owner.budget) + int(card.market_price)
+                        card.user_id = buyer.id
                         card.market_value = int(card.market_price)
-                        # card.on_market = False
+                        card.on_market = False
                         session.commit()
 
-                        self.predict_and_update_prices()
+                        if owner.id != buyer.id:
+                            raise Exception(f"Custom Exception: owner.id={owner.id}, buyer.id={buyer.id}")
 
                         return {
                             'card_id': card.id,
                             'card_name': card.name,
+                            'card_age': card.age,
+                            'card_skill': card.skill,
                             'market_value': card.market_value,
                             'market_price': card.market_price,
-                            'user_id': card.user_id,
-                            'on_market': card.on_market,
+                            'owner_id': owner.id,
+                            'buyer_id': buyer.id,
+                            'buyer_budget': buyer.budget,
+                            'owner_budget': owner.budget,    #for test
+                            'card_on_market': card.on_market,           #for test
                             'message': 'Card was bought successfully',
                         }, 201
                     elif not card:
