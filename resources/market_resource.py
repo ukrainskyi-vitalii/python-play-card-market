@@ -176,11 +176,11 @@ class MarketResource(Resource):
                             'message': 'There is no card with this card_id on market',
                             'card_id': card_id
                         }, 404
-                    elif not authorized_user.budget < card.market_price:
+                    elif authorized_user.budget < card.market_price:
                         return {
                             'message': 'You do not have enough money',
                             'budget': authorized_user.budget,
-                            'market_price': card.market_price
+                            'card_price': card.market_price
                         }
         except NotFoundException as e:
             return {'error': str(e)}, 404
