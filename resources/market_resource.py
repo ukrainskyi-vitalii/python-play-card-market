@@ -155,7 +155,10 @@ class MarketResource(Resource):
                         session.commit()
 
                         if owner.id != buyer.id:
+                            success_message = 'Card was bought successfully'
                             self.predict_and_update_prices()
+                        else:
+                            success_message = 'The card has been withdrawn from sale successfully'
 
                         return {
                             'card_id': card.id,
@@ -169,7 +172,7 @@ class MarketResource(Resource):
                             'buyer_budget': buyer.budget,
                             'owner_budget': owner.budget,    #for test
                             'card_on_market': card.on_market,           #for test
-                            'message': 'Card was bought successfully',
+                            'message': success_message,
                         }, 201
                     elif not card:
                         return {
