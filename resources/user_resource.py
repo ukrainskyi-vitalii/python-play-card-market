@@ -22,12 +22,13 @@ from itsdangerous import URLSafeTimedSerializer
 
 
 class UserResource(Resource):
-    def __init__(self, session, authorization_helper):
+    def __init__(self, session, authorization_helper, predict_price):
         self.__session = session
         self.__authorization_helper = authorization_helper
         self.__budget = 500
         self.secret_key = SECRET_KEY
         self.serializer = URLSafeTimedSerializer(self.secret_key)
+        self.predict_price = predict_price
 
     def post(self):
         try:
@@ -70,6 +71,8 @@ class UserResource(Resource):
                     session.add(new_card)
 
                 session.commit()
+
+                self.predict_price.predict_and_update_prices()
 
                 return {
                     'message': 'User registered successfully',

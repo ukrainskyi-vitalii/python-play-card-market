@@ -13,16 +13,15 @@ from models.user import User
 
 from itsdangerous import URLSafeTimedSerializer
 
-from sklearn.linear_model import LinearRegression
-
 
 class MarketResource(Resource):
-    def __init__(self, session, authorization_helper):
+    def __init__(self, session, authorization_helper, predict_price):
         self.__session = session
         self.__authorization_helper = authorization_helper
         self.__budget = 500
         self.secret_key = SECRET_KEY
         self.serializer = URLSafeTimedSerializer(self.secret_key)
+        self.predict_price = predict_price
 
     def post(self):
         try:
@@ -144,6 +143,15 @@ class MarketResource(Resource):
                     self.card_validation(card_id)
 
                     card = self.__session.query(Card).filter_by(id=card_id, on_market=True).first()
+                    if authorized_user.id == card.user_id:
+                        card.on_market = False
+                        session.commit()
+                        return {
+                            'message': 'The card has been withdrawn from sale successfully',
+                            'card_id': card.id,
+                            'owner_id': authorized_user.id
+                        }, 201
+
                     if card and int(authorized_user.budget) >= int(card.market_price):
                         owner = self.__session.query(User).filter_by(id=card.user_id).first()
                         buyer = self.__session.query(User).filter_by(id=authorized_user.id).first()
@@ -154,11 +162,7 @@ class MarketResource(Resource):
                         card.on_market = False
                         session.commit()
 
-                        if owner.id != buyer.id:
-                            success_message = 'Card was bought successfully'
-                            self.predict_and_update_prices()
-                        else:
-                            success_message = 'The card has been withdrawn from sale successfully'
+                        self.predict_price.predict_and_update_prices()
 
                         return {
                             'card_id': card.id,
@@ -172,7 +176,7 @@ class MarketResource(Resource):
                             'buyer_budget': buyer.budget,
                             'owner_budget': owner.budget,    #for test
                             'card_on_market': card.on_market,           #for test
-                            'message': success_message,
+                            'message': 'Card was bought successfully',
                         }, 201
                     elif not card:
                         return {
@@ -184,7 +188,7 @@ class MarketResource(Resource):
                             'message': 'You do not have enough money',
                             'budget': authorized_user.budget,
                             'card_price': card.market_price
-                        }
+                        }, 201
         except NotFoundException as e:
             return {'error': str(e)}, 404
         except AuthorizationException as e:
@@ -193,27 +197,6 @@ class MarketResource(Resource):
             return {'error': str(e)}, 403
         except Exception as e:
             return {'error': str(e)}, 400
-
-    def predict_and_update_prices(self):
-        # Load all card data from the database
-        cards = self.__session.query(Card).all()
-
-        # Separate features for prediction
-        predict_X = [(float(card.age), float(card.skill)) for card in cards]
-
-        # Train a Linear Regression model
-        model = LinearRegression()
-        model.fit(predict_X, [card.market_value for card in cards])
-
-        # Predict prices for all cards
-        predicted_prices = model.predict(predict_X)
-
-        # Update the Card table with the predicted prices
-        for card, predicted_price in zip(cards, predicted_prices):
-            card.market_value = int(predicted_price)
-
-        # Commit the changes to the database
-        self.__session.commit()
 
     def check_permission(self, user, user_id):
         # Deny access if not admin and requested another user id
