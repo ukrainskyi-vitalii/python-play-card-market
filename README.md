@@ -65,19 +65,17 @@ packages for each logic layer of the application architecture.
 
 ## API Endpoints
 
-- **POST /register**: Create a new user account.
+- **POST /user**: Create a new user account.
 - **POST /login**: Log in as a user.
-- **GET /user/{user_id}**: Get user profile information.
-- **PUT /user/{user_id}**: Update user profile information.
-- **GET /cards**: Get a list of all player cards.
-- **GET /cards/{card_id}**: Get details of a specific player card.
-- **POST /cards**: Add a player card to the collection.
-- **PUT /cards/{card_id}**: Update player card details.
-- **DELETE /cards/{card_id}**: Delete a player card.
-- **GET /market**: Get a list of player cards in the exchange market.
-- **POST /market**: Place a player card on the exchange market.
-- **PUT /market/{card_id}**: Update the asking price of a card on the market.
-- **POST /market/{card_id}/buy**: Buy a player card from the market.
+- **GET /user**: Get all users (_only admin can get all users_).
+- **GET /user/{user_id}**: Get user profile information (_Admin can get any user, regular user can get only himself_).
+- **PATCH /user/{user_id}**: Update user information (_Admin can update any user, regular user can update only himself
+  username and country can be updated_).
+- **DELTE /user/{user_id}**: Delete a user (_Admin can delete any user, regular user can delete only himself_)
+- **GET /market**: Get a list of cards in the exchange market.
+- **GET /market/{card_id}**: Get a card in the exchange market.
+- **POST /market**: Place a card on the exchange market.
+- **PATCH /market/{card_id}**: Buy a card on the market or withdraw card from market.
 
 ## API Documentation
 
