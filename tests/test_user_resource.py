@@ -11,7 +11,8 @@ class TestUserResource(TestCase):
     def setUp(self):
         self.session_mock = Mock()
         self.authorization_helper_mock = Mock()
-        self.user_resource = UserResource(self.session_mock, self.authorization_helper_mock)
+        self.predict_price_mock = Mock()
+        self.user_resource = UserResource(self.session_mock, self.authorization_helper_mock, self.predict_price_mock)
 
     def test_post_success(self):
         mock_parsed_args = {'username': 'test_user', 'email': 'test@gmail.com', 'password': 'test_password',
@@ -132,7 +133,9 @@ class TestUserResource(TestCase):
             "country": "country",
             "role": "regular",
             "budget": 500,
-            "collection_value": 300
+            "collection_value": 300,
+            "cards_count": 0,
+            'cards_list': []
         }], 200
 
         self.assertEqual(result, expected_result)
