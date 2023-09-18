@@ -143,6 +143,12 @@ class MarketResource(Resource):
                     self.card_validation(card_id)
 
                     card = self.__session.query(Card).filter_by(id=card_id, on_market=True).first()
+
+                    if card is None:
+                        return {
+                            'message': 'Card not found or not available for sale.'
+                        }, 404
+
                     if authorized_user.id == card.user_id:
                         card.on_market = False
                         session.commit()
@@ -174,8 +180,8 @@ class MarketResource(Resource):
                             'owner_id': owner.id,
                             'buyer_id': buyer.id,
                             'buyer_budget': buyer.budget,
-                            'owner_budget': owner.budget,    #for test
-                            'card_on_market': card.on_market,           #for test
+                            'owner_budget': owner.budget,  # for test
+                            'card_on_market': card.on_market,  # for test
                             'message': 'Card was bought successfully',
                         }, 201
                     elif not card:
