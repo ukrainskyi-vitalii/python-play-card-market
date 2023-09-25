@@ -48,7 +48,6 @@ class LoginResource(Resource):
         except Exception as e:
             return {'error': str(e)}, 400
 
-
     def get_args(self):
         parser = reqparse.RequestParser()
         parser.add_argument('email', required=True, help='Email is required')
