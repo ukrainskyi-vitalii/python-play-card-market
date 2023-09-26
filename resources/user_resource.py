@@ -240,7 +240,6 @@ class UserResource(Resource):
 
     def get_user_by_id(self, user_id):
         user = self.__session.query(User).filter_by(id=user_id).first()
-        print(f"user: {user}")
         if user is None:
             raise NotFoundException('No user found')
 

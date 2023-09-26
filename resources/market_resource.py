@@ -136,7 +136,6 @@ class MarketResource(Resource):
             return {'error': str(e)}, 400
 
     def patch(self, card_id):
-        print(card_id)
         try:
             authorized_user = self.__authorization_helper.authorization()
 
