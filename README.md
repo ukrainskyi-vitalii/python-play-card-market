@@ -130,7 +130,7 @@ To run unit tests and achieve the desired code coverage, follow these steps:
 Run
 
 ```
-coverage run -m unittest .\tests\test_resources.py
+coverage run -m unittest
 ```
 
 Report

@@ -35,6 +35,10 @@ class MarketResource(Resource):
                 self.card_validation(post_data['card_id'])
                 self.market_price_validation(post_data['market_price'])
 
+                # market price must be integer and greater than 0
+                if not self.is_integer(post_data['market_price']) or int(post_data['market_price']) <= 0:
+                    raise Exception('Invalid market_price')
+
                 # place card on market
                 card = self.__session.query(Card).filter_by(id=post_data['card_id'], user_id=authorized_user.id).first()
                 if card:
